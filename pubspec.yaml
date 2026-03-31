@@ -1,0 +1,56 @@
+﻿name: foaie_prestatii_mvp
+description: Aplicatie pentru foaie prestatii
+publish_to: "none"
+
+version: 0.0.1+93
+environment:
+    sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+    flutter:
+        sdk: flutter
+    flutter_localizations:
+        sdk: flutter
+
+    intl: ^0.20.2
+    shared_preferences: ^2.5.5
+    in_app_update: ^4.2.5
+    hive: ^2.2.3
+    hive_flutter: ^1.1.0
+    path_provider: ^2.1.5
+    package_info_plus: ^9.0.0
+    image_picker: ^1.2.1
+    image_cropper: ^12.1.1
+    file_picker: ^10.3.10
+    saf: ^1.0.4
+
+    # ML Kit compatibil Android 15 (API 36)
+    google_mlkit_commons: ^0.11.1
+    google_mlkit_text_recognition: ^0.15.1
+    flutter_phoenix: ^1.1.1
+    restart_app: ^1.7.3
+
+dev_dependencies:
+    flutter_test:
+        sdk: flutter
+    flutter_lints: ^6.0.0
+
+flutter:
+    uses-material-design: true
+    assets:
+        - assets/holidays_ro_2025.json
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,8 @@
+# Lint-uri pentru Flutter
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+  # Dez/activează reguli personalizate aici dacă vrei.
+  # exemplu:
+  # prefer_single_quotes: true
