@@ -346,6 +346,26 @@ class _AdaugaSegmentDialogState extends State<_AdaugaSegmentDialog> {
     super.dispose();
   }
 
+  void _clearAdvancedDataForTypeChange() {
+    final currentPhotoPaths =
+    (_segmentAdvancedData?.photoPaths ?? const <String>[])
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toSet();
+    final toDelete = currentPhotoPaths.difference(_initialPhotoPaths);
+    if (toDelete.isNotEmpty) {
+      AdvancedPhotoCleanupService.deletePhotoFiles(toDelete);
+    }
+    _segmentAdvancedData = null;
+  }
+
+  void _handleTypeSelected(SegmentType newType) {
+    if (_type == newType) return;
+    _clearAdvancedDataForTypeChange();
+    _type = newType;
+    _applyTypePreset();
+  }
+
   void _applyTypePreset() {
     // Dacă adăugăm un segment nou de tip Odihnă imediat după un Tren,
     // vrem ca foaia să fie setată automat:
@@ -364,6 +384,11 @@ class _AdaugaSegmentDialogState extends State<_AdaugaSegmentDialog> {
         _sheetEnabled = true;
       }
     }
+
+    if (_type == SegmentType.acar || _isFixed12h) {
+      _presetEndFromStart();
+    }
+
     setState(() {});
   }
 
@@ -428,7 +453,8 @@ class _AdaugaSegmentDialogState extends State<_AdaugaSegmentDialog> {
     bool autoChainToEnd = false,
   }) async {
     final firstDate = widget.monthFirst ?? DateTime(2020);
-    final lastDate = DateTime(_futureCap.year, _futureCap.month, _futureCap.day);
+    final effectiveLast = (widget.monthLast != null && widget.monthLast!.isBefore(_futureCap)) ? widget.monthLast! : _futureCap;
+    final lastDate = DateTime(effectiveLast.year, effectiveLast.month, effectiveLast.day);
 
     final bool isChainedEnd = (!isStart && _openingEndAfterStart);
     final DateTime initialDateForPickerRaw =
@@ -647,8 +673,7 @@ class _AdaugaSegmentDialogState extends State<_AdaugaSegmentDialog> {
                           selected: _type == SegmentType.tren,
                           onSelected: (_) {
                             if (!mounted) return;
-                            setState(() => _type = SegmentType.tren);
-                            _applyTypePreset();
+                            _handleTypeSelected(SegmentType.tren);
                           },
                         ),
                         ChoiceChip(
@@ -656,8 +681,7 @@ class _AdaugaSegmentDialogState extends State<_AdaugaSegmentDialog> {
                           selected: _type == SegmentType.odihna,
                           onSelected: (_) {
                             if (!mounted) return;
-                            setState(() => _type = SegmentType.odihna);
-                            _applyTypePreset();
+                            _handleTypeSelected(SegmentType.odihna);
                           },
                         ),
                         ChoiceChip(
@@ -665,8 +689,7 @@ class _AdaugaSegmentDialogState extends State<_AdaugaSegmentDialog> {
                           selected: _type == SegmentType.regie,
                           onSelected: (_) {
                             if (!mounted) return;
-                            setState(() => _type = SegmentType.regie);
-                            _applyTypePreset();
+                            _handleTypeSelected(SegmentType.regie);
                           },
                         ),
                         ChoiceChip(
@@ -674,8 +697,7 @@ class _AdaugaSegmentDialogState extends State<_AdaugaSegmentDialog> {
                           selected: _type == SegmentType.revizor,
                           onSelected: (_) {
                             if (!mounted) return;
-                            setState(() => _type = SegmentType.revizor);
-                            _applyTypePreset();
+                            _handleTypeSelected(SegmentType.revizor);
                           },
                         ),
                         ChoiceChip(
@@ -683,8 +705,7 @@ class _AdaugaSegmentDialogState extends State<_AdaugaSegmentDialog> {
                           selected: _type == SegmentType.sefTura,
                           onSelected: (_) {
                             if (!mounted) return;
-                            setState(() => _type = SegmentType.sefTura);
-                            _applyTypePreset();
+                            _handleTypeSelected(SegmentType.sefTura);
                           },
                         ),
                         ChoiceChip(
@@ -692,8 +713,7 @@ class _AdaugaSegmentDialogState extends State<_AdaugaSegmentDialog> {
                           selected: _type == SegmentType.acar,
                           onSelected: (_) {
                             if (!mounted) return;
-                            setState(() => _type = SegmentType.acar);
-                            _applyTypePreset();
+                            _handleTypeSelected(SegmentType.acar);
                           },
                         ),
                         ChoiceChip(
@@ -701,8 +721,7 @@ class _AdaugaSegmentDialogState extends State<_AdaugaSegmentDialog> {
                           selected: _type == SegmentType.mvStatie,
                           onSelected: (_) {
                             if (!mounted) return;
-                            setState(() => _type = SegmentType.mvStatie);
-                            _applyTypePreset();
+                            _handleTypeSelected(SegmentType.mvStatie);
                           },
                         ),
                         ChoiceChip(
@@ -710,8 +729,7 @@ class _AdaugaSegmentDialogState extends State<_AdaugaSegmentDialog> {
                           selected: _type == SegmentType.mvDepou,
                           onSelected: (_) {
                             if (!mounted) return;
-                            setState(() => _type = SegmentType.mvDepou);
-                            _applyTypePreset();
+                            _handleTypeSelected(SegmentType.mvDepou);
                           },
                         ),
                         ChoiceChip(
@@ -719,8 +737,7 @@ class _AdaugaSegmentDialogState extends State<_AdaugaSegmentDialog> {
                           selected: _type == SegmentType.alte,
                           onSelected: (_) {
                             if (!mounted) return;
-                            setState(() => _type = SegmentType.alte);
-                            _applyTypePreset();
+                            _handleTypeSelected(SegmentType.alte);
                           },
                         ),
                       ],

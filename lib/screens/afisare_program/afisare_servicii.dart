@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../calcule_ore/api.dart' show workedBucketsForSlice, kRomanianLegalHolidays;
+import '../../services/report_storage_v2.dart';
 import '../../utils/service_title.dart' show formatServiceTitle;
 
 typedef MergeSlicesFn = List<Map<String, dynamic>> Function(List<Map<String, dynamic>> input);
@@ -830,6 +831,8 @@ class AfisareServicii extends StatelessWidget {
       itemCount: entriesSorted.length,
       itemBuilder: (context, idx) {
         final entry = entriesSorted[idx];
+        final serviceId = entry.key;
+        final serviceNameFuture = ReportStorageV2.getServiceName(serviceId);
 
         final segsMergedDesc = mergeMidnightSlices(entry.value)
           ..sort((a, b) => DateTime.parse(b['start'] as String)
@@ -905,48 +908,78 @@ class AfisareServicii extends StatelessWidget {
         final displaySuffix = parts.join(' / ');
         final serviceTitleText = 'Serviciu - $intervalClean';
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (idx > 0) const SizedBox(height: 8),
-            ExpansionTile(
-              title: Text(
-                serviceTitleText,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
-                    ?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              subtitle: displaySuffix.isEmpty
-                  ? null
-                  : Text(
-                displaySuffix,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  fontStyle: FontStyle.italic,
+        return FutureBuilder<String?>(
+          future: serviceNameFuture,
+          builder: (context, snapshot) {
+            var titleText = serviceTitleText;
+            var subtitleText = displaySuffix;
+            var serviceTitleForChildren = displaySuffix.isEmpty
+                ? serviceTitleText
+                : '$serviceTitleText — $displaySuffix';
+
+            final storedName = (snapshot.data ?? '').trim();
+
+            if (storedName.isNotEmpty) {
+              final sepIndex = storedName.indexOf(' — ');
+              final storedTitle = sepIndex >= 0
+                  ? storedName.substring(0, sepIndex).trim()
+                  : storedName;
+
+              titleText = storedTitle.startsWith('Serviciu ')
+                  ? 'Serviciu - ${storedTitle.substring('Serviciu '.length)}'
+                  : storedTitle;
+
+              subtitleText = sepIndex >= 0
+                  ? storedName.substring(sepIndex + 3).trim()
+                  : '';
+
+              serviceTitleForChildren = storedName;
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (idx > 0) const SizedBox(height: 8),
+                ExpansionTile(
+                  title: Text(
+                    titleText,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: subtitleText.isEmpty
+                      ? const SizedBox.shrink()
+                      : Text(
+                    subtitleText,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                  children: groupBySheet
+                      ? _buildServiceChildren(
+                    context,
+                    mergeMidnightSlices(entry.value),
+                    dfRow,
+                    serviceTitle: serviceTitleForChildren,
+                  )
+                      : [
+                    ..._buildRowsForDisplay(
+                      context,
+                      mergeMidnightSlices(entry.value),
+                      dfRow,
+                      serviceTitle: serviceTitleForChildren,
+                      showAdvancedButton: true,
+                    ),
+                    const SizedBox(height: 8),
+                  ],
                 ),
-              ),
-              children: groupBySheet
-                  ? _buildServiceChildren(
-                context,
-                mergeMidnightSlices(entry.value),
-                dfRow,
-                serviceTitle: serviceTitleText,
-              )
-                  : [
-                ..._buildRowsForDisplay(
-                  context,
-                  mergeMidnightSlices(entry.value),
-                  dfRow,
-                  serviceTitle: serviceTitleText,
-                  showAdvancedButton: true,
-                ),
-                const SizedBox(height: 8),
               ],
-            ),
-          ],
+            );
+          },
         );
       },
     );

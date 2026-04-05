@@ -97,7 +97,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _closeApp,
-        child: const Icon(Icons.close),
+        child: const Icon(Icons.power_settings_new),
       ),
       body: Center(
         child: ConstrainedBox(

@@ -1,7 +1,7 @@
 // /lib/whats_new_text.dart
 
 const String whatsNewTitle = 'Ce este nou';
-const String whatsNewVersion = 'v0.0.92';
+const String whatsNewVersion = 'v0.0.94';
 const String whatsNewShownVersionKey = 'whats_new_shown_version';
 
 class WhatsNewEntry {
@@ -38,10 +38,20 @@ const List<WhatsNewEntry> whatsNewEntries = [
   // >>> INSEREAZĂ AICI VERSIUNEA NOUĂ, DEASUPRA CELOR VECHI >>>
 
   WhatsNewEntry(
-    version: 'v0.0.9',
+    version: 'v0.0.94',
     dateLabel: '30 martie 2026',
     changes: [
-      'A fost adaugat un buton dedicat pentru inchiderea aplicatiei',
+      'Modificare la Privacy policy, referitoare la metoda de backup/utilizare a fotografiilor salvate de aplicatie.',
+    ],
+  ),
+
+  WhatsNewEntry(
+    version: 'v0.0.93',
+    dateLabel: '30 martie 2026',
+    changes: [
+      'A fost adaugat un buton dedicat pentru inchiderea aplicației',
+      'S-a reparat introducerea/salvarea serviciilor care trec de pe o luna pe alta',
+      'S-a îmbunatățit modalitatea de creare/executare a backup/restore.',
     ],
   ),
 

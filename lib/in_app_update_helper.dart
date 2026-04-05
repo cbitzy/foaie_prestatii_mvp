@@ -137,21 +137,24 @@ class InAppUpdateHelper {
 
       final wantsUpdate = await showDialog<bool>(
         context: context,
-        barrierDismissible: true,
+        barrierDismissible: false,
         builder: (dialogCtx) {
-          return AlertDialog(
-            title: Text(promptTitle),
-            content: Text(promptMessageWithVersions),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(dialogCtx).pop(false),
-                child: Text(laterText),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.of(dialogCtx).pop(true),
-                child: Text(updateText),
-              ),
-            ],
+          return PopScope(
+            canPop: false,
+            child: AlertDialog(
+              title: Text(promptTitle),
+              content: Text(promptMessageWithVersions),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogCtx).pop(false),
+                  child: Text(laterText),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(dialogCtx).pop(true),
+                  child: Text(updateText),
+                ),
+              ],
+            ),
           );
         },
       );

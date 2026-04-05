@@ -12,8 +12,10 @@ import 'package:saf/saf.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:restart_app/restart_app.dart'; // pentru restart real al aplicației
 
+import '../../services/advanced_photo_cleanup_service.dart';
 import '../../services/recalculator.dart';
 import '../../services/report_storage_v2.dart';
+import '../../utils/holidays.dart';
 import 'norma_lunara.dart';
 
 const String kBackupSignaturePrimary = 'foaie_prestatii_mvp::backup';
@@ -316,7 +318,7 @@ Future<void> showDialogRestore(BuildContext context) async {
                     setState(() {});
                   }
                       : null,
-                  title: const Text('Servicii (toate lunile)'),
+                  title: const Text('Servicii salvate'),
                   secondary: const Icon(Icons.train_outlined),
                 ),
                 CheckboxListTile(
@@ -506,11 +508,206 @@ Future<bool> _hasExistingData() async {
     if (map.isNotEmpty || manual.isNotEmpty) return true;
   } catch (_) {}
   try {
+    final holidays = await Hive.openBox('legal_holidays_v1');
+    final List<dynamic> dates = List<dynamic>.from(
+      holidays.get('dates', defaultValue: const <dynamic>[]) as List,
+    );
+    if (dates.isNotEmpty) return true;
+  } catch (_) {}
+  try {
     final prefs = await SharedPreferences.getInstance();
     final name = prefs.getString('mechanic_name');
     if (name != null && name.trim().isNotEmpty) return true;
   } catch (_) {}
   return false;
+}
+
+Set<int> _extractYearsFromHolidayDates(List<String> dates) {
+  final years = <int>{};
+  for (final raw in dates) {
+    final value = raw.trim();
+    if (value.length < 10) continue;
+    try {
+      final d = DateTime.parse(value);
+      years.add(d.year);
+    } catch (_) {}
+  }
+  return years;
+}
+
+Set<String> _allMonthsForYears(Set<int> years) {
+  final out = <String>{};
+  for (final year in years) {
+    final yy = year.toString().padLeft(4, '0');
+    for (int month = 1; month <= 12; month++) {
+      out.add('$yy-${month.toString().padLeft(2, '0')}');
+    }
+  }
+  return out;
+}
+
+Future<void> _resetMonthlyNormsForMonths(Set<String> months) async {
+  if (months.isEmpty) return;
+
+  await loadLegalHolidaysFromDb();
+
+  final box = await Hive.openBox(kMonthlyNormBox);
+  final rawMap = box.get(kMonthlyNormKey, defaultValue: <String, dynamic>{});
+  final rawManual = box.get(kMonthlyNormManualKey, defaultValue: <String, dynamic>{});
+
+  final Map<String, double> stored = {
+    for (final e in Map<String, dynamic>.from(rawMap).entries)
+      e.key: (e.value is num ? (e.value as num).toDouble() : double.tryParse('${e.value}') ?? 0.0),
+  };
+
+  final Map<String, bool> manual = {
+    for (final e in Map<String, dynamic>.from(rawManual).entries)
+      e.key: e.value == true,
+  };
+
+  for (final ym in months) {
+    if (ym.length < 7) continue;
+    final year = int.tryParse(ym.substring(0, 4));
+    final month = int.tryParse(ym.substring(5, 7));
+    if (year == null || month == null) continue;
+
+    final def = _defaultHoursForMonthUsingGlobalHolidays(year, month);
+    stored[ym] = def;
+    manual[ym] = false;
+  }
+
+  await box.put(kMonthlyNormKey, stored);
+  await box.put(kMonthlyNormManualKey, manual);
+}
+
+double _defaultHoursForMonthUsingGlobalHolidays(int year, int month) {
+  return _workingDaysInMonthUsingGlobalHolidays(year, month) * 8.0;
+}
+
+int _workingDaysInMonthUsingGlobalHolidays(int year, int month) {
+  final DateTime end;
+  if (month == 12) {
+    end = DateTime(year + 1, 1, 1).subtract(const Duration(days: 1));
+  } else {
+    end = DateTime(year, month + 1, 1).subtract(const Duration(days: 1));
+  }
+
+  int count = 0;
+  for (int day = 1; day <= end.day; day++) {
+    final cur = DateTime(year, month, day);
+    final weekday = cur.weekday;
+    if (weekday == DateTime.saturday || weekday == DateTime.sunday) {
+      continue;
+    }
+
+    final d = DateTime(cur.year, cur.month, cur.day);
+    if (kRomanianLegalHolidays.contains(d)) {
+      continue;
+    }
+
+    count++;
+  }
+
+  return count;
+}
+
+Future<Map<String, String>> _restoreServicePhotosFromBackup(
+    Map<String, dynamic> data,
+    ) async {
+  final restoredPhotoPaths = <String, String>{};
+
+  if (!data.containsKey('services_photos') || data['services_photos'] is! Map) {
+    return restoredPhotoPaths;
+  }
+
+  final appDir = await getApplicationDocumentsDirectory();
+  final photosDir = Directory(
+    '${appDir.path}/${AdvancedPhotoCleanupService.photosDirectoryName}',
+  );
+
+  if (!await photosDir.exists()) {
+    await photosDir.create(recursive: true);
+  }
+
+  final photos = Map<String, dynamic>.from(data['services_photos'] as Map);
+
+  for (final entry in photos.entries) {
+    final oldPath = entry.key.trim();
+    if (oldPath.isEmpty || entry.value is! Map) {
+      continue;
+    }
+
+    final photoData = Map<String, dynamic>.from(entry.value as Map);
+    final fileName = (photoData['fileName'] as String? ?? '').trim();
+    final base64Data = (photoData['base64'] as String? ?? '').trim();
+
+    if (fileName.isEmpty || base64Data.isEmpty) {
+      continue;
+    }
+
+    final restoredPath = '${photosDir.path}/$fileName';
+    await File(restoredPath).writeAsBytes(
+      base64Decode(base64Data),
+      flush: true,
+    );
+
+    restoredPhotoPaths[oldPath] = restoredPath;
+  }
+
+  return restoredPhotoPaths;
+}
+
+Map<String, dynamic> _rewriteServicePhotoPathsInDaySegments(
+    Map<String, dynamic> byService,
+    Map<String, String> restoredPhotoPaths,
+    ) {
+  final updatedByService = <String, dynamic>{};
+
+  for (final entry in byService.entries) {
+    final segmentsValue = entry.value;
+
+    if (segmentsValue is! List) {
+      updatedByService[entry.key] = entry.value;
+      continue;
+    }
+
+    final updatedSegments = <Map<String, dynamic>>[];
+
+    for (final segmentValue in segmentsValue) {
+      if (segmentValue is! Map) {
+        continue;
+      }
+
+      final segment = Map<String, dynamic>.from(segmentValue);
+      final rawPhotoPaths = segment['advancedPhotoPaths'];
+
+      if (rawPhotoPaths is List) {
+        final updatedPhotoPaths = <String>[];
+
+        for (final item in rawPhotoPaths) {
+          final oldPath = item.toString().trim();
+          if (oldPath.isEmpty) {
+            continue;
+          }
+
+          final restoredPath = restoredPhotoPaths[oldPath];
+          if (restoredPath != null && restoredPath.isNotEmpty) {
+            updatedPhotoPaths.add(restoredPath);
+          }
+        }
+
+        segment['advancedPhotoPaths'] = updatedPhotoPaths.isEmpty
+            ? null
+            : updatedPhotoPaths;
+      }
+
+      updatedSegments.add(segment);
+    }
+
+    updatedByService[entry.key] = updatedSegments;
+  }
+
+  return updatedByService;
 }
 
 Future<File> _performRestore(
@@ -531,14 +728,22 @@ Future<File> _performRestore(
   if (schema < kSchemaMinSupported || schema > kSchemaMaxSupported) {
     throw 'Schema backup incompatibilă.';
   }
-
+  final affectedHolidayYears = <int>{};
   if (restoreHolidays && data.containsKey('legal_holidays_v1')) {
-    final b = await Hive.openBox('legal_holidays_v1');
+    final b = await Hive.openBox(kLegalHolidaysBox);
+
+    final existingDates = List<String>.from(
+      b.get(kLegalHolidaysKey, defaultValue: const <String>[]),
+    );
+    affectedHolidayYears.addAll(_extractYearsFromHolidayDates(existingDates));
+
     await b.clear();
 
     final v = data['legal_holidays_v1'] as Map<String, dynamic>;
     final dates = List<String>.from(v['dates'] ?? const <String>[]);
-    await b.put('dates', dates);
+    affectedHolidayYears.addAll(_extractYearsFromHolidayDates(dates));
+
+    await b.put(kLegalHolidaysKey, dates);
   }
 
   if (restoreServices) {
@@ -554,10 +759,34 @@ Future<File> _performRestore(
     final monthlyOvertime = await Hive.openBox('monthly_overtime_v1');
     await monthlyOvertime.clear();
 
+    try {
+      final appDir = await getApplicationDocumentsDirectory();
+      final photosDir = Directory(
+        '${appDir.path}/${AdvancedPhotoCleanupService.photosDirectoryName}',
+      );
+      if (await photosDir.exists()) {
+        await photosDir.delete(recursive: true);
+      }
+    } catch (_) {}
+
+    final hasServicesPhotos =
+        data.containsKey('services_photos') && data['services_photos'] is Map;
+    final restoredPhotoPaths = hasServicesPhotos
+        ? await _restoreServicePhotosFromBackup(data)
+        : <String, String>{};
+
     if (data.containsKey(ReportStorageV2.boxName)) {
       final Map<String, dynamic> daily = Map<String, dynamic>.from(data[ReportStorageV2.boxName] as Map);
       for (final entry in daily.entries) {
-        await box.put(entry.key, entry.value);
+        if (hasServicesPhotos && entry.key.endsWith('#seg') && entry.value is Map) {
+          final rewrittenByService = _rewriteServicePhotoPathsInDaySegments(
+            Map<String, dynamic>.from(entry.value as Map),
+            restoredPhotoPaths,
+          );
+          await box.put(entry.key, rewrittenByService);
+        } else {
+          await box.put(entry.key, entry.value);
+        }
       }
     }
 
@@ -599,6 +828,12 @@ Future<File> _performRestore(
     if (restoreHolidays || restoreServices) {
       await Recalculator.recalcAllDailyTotalsUsingSegments(months: monthsTouched);
       await Recalculator.reaggregateAndWriteMonthlyTotals(months: monthsTouched);
+
+      if (restoreHolidays && !restoreMonthlyNorms) {
+        final monthsToResetNorms = _allMonthsForYears(affectedHolidayYears);
+        await _resetMonthlyNormsForMonths(monthsToResetNorms);
+      }
+
       await Recalculator.recalcMonthlyOvertimeForMonths(monthsTouched);
     } else {
       await Recalculator.recalcMonthlyOvertimeForMonths(monthsTouched);

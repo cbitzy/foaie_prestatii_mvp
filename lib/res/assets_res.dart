@@ -7,6 +7,6 @@ class AssetsRes {
   AssetsRes._();
 
   static const String PROJECT_NAME = 'foaie_prestatii_mvp';
-  static const String PROJECT_VERSION = '0.0.1+93';
+  static const String PROJECT_VERSION = '0.0.1+94';
   static const String HOLIDAYS_RO_2025 = 'assets/holidays_ro_2025.json';
 }

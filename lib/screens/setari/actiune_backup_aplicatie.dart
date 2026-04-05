@@ -11,6 +11,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:file_picker/file_picker.dart';
 
+import '../../services/advanced_photo_cleanup_service.dart';
 import '../../services/report_storage_v2.dart';
 import 'norma_lunara.dart';
 
@@ -108,10 +109,13 @@ Future<void> showDialogBackup(BuildContext context) async {
                         style: TextStyle(fontSize: 12, color: Colors.black54),
                       )
                     else
-                      SizedBox(
-                        height: 200,
-                        width: 420,
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(
+                          maxHeight: 180,
+                          maxWidth: 420,
+                        ),
                         child: ListView.builder(
+                          shrinkWrap: true,
                           itemCount: currentFiles.length,
                           itemBuilder: (_, i) {
                             final f = currentFiles[i];
@@ -188,7 +192,7 @@ Future<void> showDialogBackup(BuildContext context) async {
                           selAll = selHolidays && selServices && selMonthlyNorms && selMechanicName;
                         });
                       },
-                      title: const Text('Servicii (toate lunile)'),
+                      title: const Text('Servicii salvate'),
                       secondary: const Icon(Icons.train_outlined),
                     ),
                     CheckboxListTile(
@@ -554,6 +558,61 @@ Future<void> _showDialogDeleteBackups(BuildContext context, {required BackupDest
   );
 }
 
+Future<Map<String, dynamic>> _buildServicesPhotosBackupPayload(
+    Map<String, dynamic> daily,
+    ) async {
+  final referencedPhotoPaths = <String>{};
+
+  for (final entry in daily.entries) {
+    if (!entry.key.endsWith('#seg')) {
+      continue;
+    }
+
+    final byService = Map<String, dynamic>.from(entry.value as Map);
+
+    for (final segmentsValue in byService.values) {
+      if (segmentsValue is! List) {
+        continue;
+      }
+
+      final segments = segmentsValue
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e));
+
+      referencedPhotoPaths.addAll(
+        AdvancedPhotoCleanupService.collectPhotoPathsFromStorageSegments(
+          segments,
+        ),
+      );
+    }
+  }
+
+  final photos = <String, dynamic>{};
+
+  for (final rawPath in referencedPhotoPaths) {
+    final path = rawPath.trim();
+    if (path.isEmpty) {
+      continue;
+    }
+
+    final file = File(path);
+    if (!await file.exists()) {
+      continue;
+    }
+
+    final fileName = file.uri.pathSegments.isNotEmpty
+        ? file.uri.pathSegments.last
+        : path.split(Platform.pathSeparator).last;
+
+    photos[path] = {
+      'fileName': fileName,
+      'base64': base64Encode(await file.readAsBytes()),
+    };
+  }
+
+  return photos;
+}
+
 Future<File> _performBackup({
   required bool includeHolidays,
   required bool includeServices,
@@ -592,6 +651,7 @@ Future<File> _performBackup({
       serviceMeta['$k'] = meta.get(k);
     }
     out[ReportStorageV2.metaBoxName] = serviceMeta;
+    out['services_photos'] = await _buildServicesPhotosBackupPayload(daily);
   }
 
   // 3) Norme lunare

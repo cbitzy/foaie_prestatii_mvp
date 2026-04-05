@@ -130,6 +130,62 @@ class _AdaugaModificaServiciuScreenState
       );
     }
 
+    bool samePhotoPaths(dynamic a, dynamic b) {
+      List<String> normalizePhotoList(dynamic value) {
+        if (value is! List) return const <String>[];
+        return value
+            .map((e) => e.toString().trim())
+            .where((e) => e.isNotEmpty)
+            .toList();
+      }
+
+      final aa = normalizePhotoList(a);
+      final bb = normalizePhotoList(b);
+
+      if (aa.length != bb.length) return false;
+
+      for (int i = 0; i < aa.length; i++) {
+        if (aa[i] != bb[i]) return false;
+      }
+
+      return true;
+    }
+
+    bool sameAdvancedFields(Map<String, dynamic> a, Map<String, dynamic> b) {
+      return sameIfPresent(norm(a['advancedMode']), norm(b['advancedMode'])) &&
+          sameIfPresent(norm(a['locomotiveType']), norm(b['locomotiveType'])) &&
+          sameIfPresent(
+            norm(a['locomotiveClass']),
+            norm(b['locomotiveClass']),
+          ) &&
+          sameIfPresent(
+            norm(a['locomotiveNumber']),
+            norm(b['locomotiveNumber']),
+          ) &&
+          sameIfPresent(
+            norm(a['mecFormatorName']),
+            norm(b['mecFormatorName']),
+          ) &&
+          sameIfPresent(
+            norm(a['advancedObservations']),
+            norm(b['advancedObservations']),
+          ) &&
+          sameIfPresent(
+            norm(a['servicePerformedAs']),
+            norm(b['servicePerformedAs']),
+          ) &&
+          sameIfPresent(
+            norm(a['assistantMechanicName']),
+            norm(b['assistantMechanicName']),
+          ) &&
+          sameIfPresent(
+            norm(a['odihnaDormitor']),
+            norm(b['odihnaDormitor']),
+          ) &&
+          sameIfPresent(norm(a['odihnaCamera']), norm(b['odihnaCamera'])) &&
+          samePhotoPaths(a['advancedPhotoPaths'], b['advancedPhotoPaths']);
+    }
+
     bool isExactMidnight(DateTime dt) =>
         dt.hour == 0 &&
             dt.minute == 0 &&
@@ -149,12 +205,14 @@ class _AdaugaModificaServiciuScreenState
       final sameNo = sameTrainNo(cur, next);
       final sameFoaie = sameSheet(cur, next);
       final sameDesc = sameAlteDesc(cur, next);
+      final sameAdvanced = sameAdvancedFields(cur, next);
 
       if (splitAtMidnight &&
           sameType &&
           sameNo &&
           sameFoaie &&
-          sameDesc) {
+          sameDesc &&
+          sameAdvanced) {
         cur['end'] = next['end'];
       } else {
         out.add(cur);
@@ -585,6 +643,7 @@ class _AdaugaModificaServiciuScreenState
               final start = DateTime.parse(segsMergedDesc.last['start']);
               final end = DateTime.parse(segsMergedDesc.first['end']);
               final interval = formatServiceTitle(start, end);
+              final serviceNameFuture = ReportStorageV2.getServiceName(serviceId);
 
               return ExpansionTile(
                 tilePadding: EdgeInsets.zero,
@@ -630,21 +689,58 @@ class _AdaugaModificaServiciuScreenState
                   },
                 ),
 
-                title: Text(
-                  interval,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleMedium
-                      ?.copyWith(fontWeight: FontWeight.bold),
+                title: FutureBuilder<String?>(
+                  future: serviceNameFuture,
+                  builder: (context, snapshot) {
+                    var titleText = interval;
+                    final storedName = (snapshot.data ?? '').trim();
+
+                    if (storedName.isNotEmpty) {
+                      final sepIndex = storedName.indexOf(' — ');
+                      final storedTitle = sepIndex >= 0
+                          ? storedName.substring(0, sepIndex).trim()
+                          : storedName;
+                      titleText = storedTitle.startsWith('Serviciu ')
+                          ? 'Serviciu - ${storedTitle.substring('Serviciu '.length)}'
+                          : storedTitle;
+                    }
+
+                    return Text(
+                      titleText,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(fontWeight: FontWeight.bold),
+                    );
+                  },
                 ),
-                subtitle: displaySuffix.isEmpty ? null : Text(
-                  displaySuffix,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    fontStyle: FontStyle.italic,
-                  ),
+                subtitle: FutureBuilder<String?>(
+                  future: serviceNameFuture,
+                  builder: (context, snapshot) {
+                    var subtitleText = displaySuffix;
+                    final storedName = (snapshot.data ?? '').trim();
+
+                    if (storedName.isNotEmpty) {
+                      final sepIndex = storedName.indexOf(' — ');
+                      subtitleText = sepIndex >= 0
+                          ? storedName.substring(sepIndex + 3).trim()
+                          : '';
+                    }
+
+                    if (subtitleText.isEmpty) {
+                      return const SizedBox.shrink();
+                    }
+
+                    return Text(
+                      subtitleText,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    );
+                  },
                 ),
                 trailing: IconButton(
                   tooltip: 'Șterge serviciul',

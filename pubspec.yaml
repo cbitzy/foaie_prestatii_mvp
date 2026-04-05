@@ -2,7 +2,7 @@
 description: Aplicatie pentru foaie prestatii
 publish_to: "none"
 
-version: 0.0.1+93
+version: 0.0.1+94
 environment:
     sdk: ">=3.0.0 <4.0.0"
 
@@ -18,10 +18,10 @@ dependencies:
     hive: ^2.2.3
     hive_flutter: ^1.1.0
     path_provider: ^2.1.5
-    package_info_plus: ^9.0.0
+    package_info_plus: ^9.0.1
     image_picker: ^1.2.1
     image_cropper: ^12.1.1
-    file_picker: ^10.3.10
+    file_picker: ^11.0.1
     saf: ^1.0.4
 
     # ML Kit compatibil Android 15 (API 36)

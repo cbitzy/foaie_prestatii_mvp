@@ -128,25 +128,28 @@ Future<void> _showDstMarch2026SplitFixDialogIfNeeded(
 
   await showDialog<void>(
     context: context,
-    barrierDismissible: true,
+    barrierDismissible: false,
     builder: (dialogCtx) {
-      return AlertDialog(
-        title: Text(title),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: SingleChildScrollView(
-            child: SelectableText(
-              'Am găsit servicii salvate greșit din cauza split-ului de la schimbarea orei și le-am refăcut automat.\n\n$details',
-              textAlign: TextAlign.start,
+      return PopScope(
+        canPop: false,
+        child: AlertDialog(
+          title: Text(title),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: SingleChildScrollView(
+              child: SelectableText(
+                'Am găsit servicii salvate greșit din cauza split-ului de la schimbarea orei și le-am refăcut automat.\n\n$details',
+                textAlign: TextAlign.start,
+              ),
             ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogCtx).pop(),
+              child: const Text('OK'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogCtx).pop(),
-            child: const Text('OK'),
-          ),
-        ],
       );
     },
   );

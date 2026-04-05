@@ -184,9 +184,14 @@ class _NormaLunaraScreenState extends State<NormaLunaraScreen> {
       return;
     }
 
+    final ok = await _confirmDiscardChanges();
+    if (!mounted) return;
+    if (!ok) return;
+
     setState(() {
       _selectedYear = y;
       _editMode = false;
+      _dirty = false;
       _prepareControllersForYear(y);
       _monthsChangedSinceEdit.clear();
     });
@@ -324,17 +329,42 @@ class _NormaLunaraScreenState extends State<NormaLunaraScreen> {
 
   // ---------- salvare ----------
 
-  Future<void> _save({
+  int? _firstInvalidEditedMonth() {
+    for (int m = 1; m <= 12; m++) {
+      final key = _keyYearMonth(_selectedYear, m);
+      final text = _controllers[key]!.text.trim();
+      if (text.isEmpty) continue;
+
+      final parsed = double.tryParse(text.replaceAll(',', '.'));
+      if (parsed == null) {
+        return m;
+      }
+    }
+    return null;
+  }
+  Future<bool> _save({
     bool showToast = true,
     bool applyPendingEdits = true,
     bool closeEditMode = true,
   }) async {
-    if (_saving) return;
-    if (!mounted) return;
+    if (_saving) return false;
+    if (!mounted) return false;
+
+    final invalidMonth = _firstInvalidEditedMonth();
+    if (invalidMonth != null) {
+      final monthName = DateFormat.MMMM('ro_RO').format(DateTime(2000, invalidMonth, 1));
+      final label = '${monthName[0].toUpperCase()}${monthName.substring(1)}';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Valoare invalidă la $label. Corectează câmpul înainte de salvare.'),
+        ),
+      );
+      return false;
+    }
 
     if (_editMode && applyPendingEdits) {
       _applyEditsWithoutPersist();
-      if (!mounted) return;
+      if (!mounted) return false;
       if (closeEditMode) {
         setState(() => _editMode = false);
       }
@@ -363,14 +393,15 @@ class _NormaLunaraScreenState extends State<NormaLunaraScreen> {
       _dirty = false;
       _monthsChangedSinceEdit.clear();
 
-      if (!mounted) return;
+      if (!mounted) return false;
       if (showToast) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Norme lunare salvate.')),
         );
       }
-      if (!mounted) return;
+      if (!mounted) return false;
       setState(() {});
+      return true;
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -386,8 +417,9 @@ class _NormaLunaraScreenState extends State<NormaLunaraScreen> {
         actions: [
           TextButton(
             onPressed: () async {
-              await _save(showToast: false);
-              if (ctx.mounted) Navigator.of(ctx).pop(true);
+              final saved = await _save(showToast: false);
+              if (!ctx.mounted) return;
+              if (saved) Navigator.of(ctx).pop(true);
             },
             child: const Text('Salvează'),
           ),
@@ -506,20 +538,35 @@ class _NormaLunaraScreenState extends State<NormaLunaraScreen> {
                   tooltip: 'Șterge valoarea (revine pe auto imediat)',
                   icon: const Icon(Icons.delete),
                   onPressed: () async {
-                    // reset IMEDIAT la AUTO pentru luna curentă și persistă în Hive
+                    // reset IMEDIAT la AUTO doar pentru luna curentă și persistă doar această lună
+                    final pendingOtherMonths = Set<int>.from(_monthsChangedSinceEdit)
+                      ..remove(month);
+
                     final def = _defaultHoursForMonth(year, month);
                     ctrl.text = _formatHours(def);
                     final keyYm = _keyYearMonth(year, month);
                     _stored[keyYm] = def;
                     _manual[keyYm] = false;
-                    _monthsChangedSinceEdit.add(month);
+
+                    _monthsChangedSinceEdit
+                      ..clear()
+                      ..add(month);
                     _dirty = true;
                     setState(() {});
+
                     await _save(
                       showToast: false,
-                      applyPendingEdits: true,
+                      applyPendingEdits: false,
                       closeEditMode: false,
                     );
+                    if (!mounted) return;
+
+                    setState(() {
+                      _monthsChangedSinceEdit
+                        ..clear()
+                        ..addAll(pendingOtherMonths);
+                      _dirty = pendingOtherMonths.isNotEmpty;
+                    });
                   },
                 ),
               ],

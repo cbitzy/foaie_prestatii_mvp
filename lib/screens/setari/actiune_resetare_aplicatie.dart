@@ -1,11 +1,16 @@
 // /lib/screens/setari/actiune_resetare_aplicatie.dart
 
 import 'dart:async';
-import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'dart:io';
 
+import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../services/advanced_photo_cleanup_service.dart';
 import '../../services/report_storage_v2.dart';
+import '../../utils/holidays.dart';
 import '../privacy_policy_consent_screen.dart';
 
 /// Backwards-compat alias kept so existing calls keep working.
@@ -104,25 +109,42 @@ Future<void> _performFullReset(BuildContext context) async {
       }
     }
 
-    // 3) SharedPreferences
+    // 3) Reîncărcăm explicit sărbătorile legale din DB după golirea box-ului,
+    // ca să nu rămână în memorie valorile vechi în sesiunea curentă.
+    try {
+      await loadLegalHolidaysFromDb();
+    } catch (_) {}
+
+    // 4) SharedPreferences
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.clear();
     } catch (_) {}
 
-    // 4) Asigură-te că Hive nu mai are nimic deschis.
+    // 4) Ștergem și fișierele foto avansate din storage-ul aplicației.
+    try {
+      final appDir = await getApplicationDocumentsDirectory();
+      final photosDir = Directory(
+        '${appDir.path}/${AdvancedPhotoCleanupService.photosDirectoryName}',
+      );
+      if (await photosDir.exists()) {
+        await photosDir.delete(recursive: true);
+      }
+    } catch (_) {}
+
+    // 5) Asigură-te că Hive nu mai are nimic deschis.
     try {
       await Hive.close();
     } catch (_) {}
 
-    // 5) Feedback vizual
+    // 6) Feedback vizual
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Reset complet. Aplicația a fost curățată.')),
       );
     }
 
-    // 6) Navigăm către ecranul de consimțământ Privacy Policy și golim stiva.
+    // 7) Navigăm către ecranul de consimțământ Privacy Policy și golim stiva.
     if (context.mounted) {
       Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
         MaterialPageRoute(

@@ -87,8 +87,10 @@ class _AdaugaServiciuScreenState extends State<AdaugaServiciuScreen> {
       final minStart = _segments.map((s) => s.start).reduce((a, b) => a.isBefore(b) ? a : b);
       return DateTime(minStart.year, minStart.month, minStart.day);
     }
-    // Pentru servicii noi păstrăm începutul lunii selectate.
-    return DateTime(widget.selYear, widget.selMonth, 1);
+    // Pentru servicii noi, permitem și ultima zi din luna precedentă,
+    // ca să poată fi introdus un serviciu început înainte de miezul nopții
+    // și continuat în luna selectată.
+    return DateTime(widget.selYear, widget.selMonth, 0);
   }
 
   DateTime get _monthLast {

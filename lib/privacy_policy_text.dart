@@ -6,7 +6,7 @@ const String privacyPolicyEffectiveDate =
 const String privacyPolicyDeveloper =
     'Creator/Dezvoltator: bitzy - (în măsura aplicabilă)';
 const String privacyPolicyContact = 'Contact: cbitzy0220@gmail.com';
-const String privacyPolicyVersion = 'v1';
+const String privacyPolicyVersion = 'v2';
 const String privacyPolicyAcceptedKey = 'privacy_policy_accepted';
 const String privacyPolicyAcceptedVersionKey = 'privacy_policy_accepted_version';
 const String privacyPolicyAcceptedAtKey = 'privacy_policy_accepted_at';
@@ -82,7 +82,7 @@ Backup-ul poate include, în funcție de opțiunile alese de utilizator:
 
 Backup-ul este salvat local pe dispozitiv, într-o locație implicită sau într-un director ales de utilizator. Utilizatorul controlează în mod direct crearea, alegerea locației și ștergerea fișierelor de backup.
 
-Important: în versiunea actuală, fișierul de backup poate conține date și referințe/path-uri către elemente asociate înregistrărilor, dar fișierele foto efective salvate separat în spațiul aplicației pot să nu fie incluse ca fișiere binare distincte în backup. Prin urmare, restaurarea unui backup nu garantează întotdeauna și restaurarea fișierelor foto dacă acestea nu mai există în locațiile lor locale.
+Important: în versiunea actuală, dacă utilizatorul include serviciile în backup și fișierele foto asociate există local la momentul creării backup-ului, fișierul de backup poate include și conținutul acestor fotografii, împreună cu datele și referințele/path-urile asociate înregistrărilor. La restaurare, aplicația poate recrea local aceste fișiere foto din datele incluse în backup. Dacă anumite fișiere foto nu mai există local, nu pot fi citite sau nu sunt disponibile la momentul creării backup-ului, ele pot lipsi din backup și, în consecință, nu vor putea fi restaurate ulterior.
 
 10) OCR și fotografii
 Aplicația poate permite adăugarea de fotografii și prelucrarea lor locală pe dispozitiv, inclusiv decupare și recunoaștere de text (OCR), pentru a extrage anumite informații utile utilizatorului.
@@ -147,7 +147,7 @@ Utilizatorul este responsabil pentru verificarea datelor introduse, pentru păst
 19) Modificări ale politicii
 Această politică poate fi actualizată periodic. Versiunea afișată în aplicație este versiunea curentă a politicii pentru versiunea respectivă a aplicației, cu excepția cazului în care este indicat altfel.
 
-Ultima actualizare: 28 martie 2026
+Ultima actualizare: 04 aprilie 2026
 
 20) Contact
 cbitzy0220@gmail.com

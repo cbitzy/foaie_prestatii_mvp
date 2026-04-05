@@ -31,7 +31,16 @@ Future<bool> showDialogModificaNume(BuildContext context) async {
           ),
           ElevatedButton(
             onPressed: () async {
-              await prefs.setString('mechanic_name', controller.text.trim());
+              final newName = controller.text.trim();
+              if (newName.isEmpty) {
+                if (!ctxDialog.mounted) return;
+                ScaffoldMessenger.of(ctxDialog).showSnackBar(
+                  const SnackBar(content: Text('Numele nu poate fi gol.')),
+                );
+                return;
+              }
+
+              await prefs.setString('mechanic_name', newName);
               if (!ctxDialog.mounted) return;
               Navigator.of(ctxDialog).pop(true);
             },

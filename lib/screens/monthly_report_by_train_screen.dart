@@ -77,6 +77,62 @@ class _MonthlyReportByTrainScreenState extends State<MonthlyReportByTrainScreen>
       );
     }
 
+    bool samePhotoPaths(dynamic a, dynamic b) {
+      List<String> normalizePhotoList(dynamic value) {
+        if (value is! List) return const <String>[];
+        return value
+            .map((e) => e.toString().trim())
+            .where((e) => e.isNotEmpty)
+            .toList();
+      }
+
+      final aa = normalizePhotoList(a);
+      final bb = normalizePhotoList(b);
+
+      if (aa.length != bb.length) return false;
+
+      for (int i = 0; i < aa.length; i++) {
+        if (aa[i] != bb[i]) return false;
+      }
+
+      return true;
+    }
+
+    bool sameAdvancedFields(Map<String, dynamic> a, Map<String, dynamic> b) {
+      return sameIfPresent(norm(a['advancedMode']), norm(b['advancedMode'])) &&
+          sameIfPresent(norm(a['locomotiveType']), norm(b['locomotiveType'])) &&
+          sameIfPresent(
+            norm(a['locomotiveClass']),
+            norm(b['locomotiveClass']),
+          ) &&
+          sameIfPresent(
+            norm(a['locomotiveNumber']),
+            norm(b['locomotiveNumber']),
+          ) &&
+          sameIfPresent(
+            norm(a['mecFormatorName']),
+            norm(b['mecFormatorName']),
+          ) &&
+          sameIfPresent(
+            norm(a['advancedObservations']),
+            norm(b['advancedObservations']),
+          ) &&
+          sameIfPresent(
+            norm(a['servicePerformedAs']),
+            norm(b['servicePerformedAs']),
+          ) &&
+          sameIfPresent(
+            norm(a['assistantMechanicName']),
+            norm(b['assistantMechanicName']),
+          ) &&
+          sameIfPresent(
+            norm(a['odihnaDormitor']),
+            norm(b['odihnaDormitor']),
+          ) &&
+          sameIfPresent(norm(a['odihnaCamera']), norm(b['odihnaCamera'])) &&
+          samePhotoPaths(a['advancedPhotoPaths'], b['advancedPhotoPaths']);
+    }
+
     bool isExactMidnight(DateTime dt) =>
         dt.hour == 0 &&
             dt.minute == 0 &&
@@ -96,8 +152,14 @@ class _MonthlyReportByTrainScreenState extends State<MonthlyReportByTrainScreen>
       final sameNo = sameTrainNo(cur, next);
       final sameFoaie = sameSheet(cur, next);
       final sameDesc = sameAlteDesc(cur, next);
+      final sameAdvanced = sameAdvancedFields(cur, next);
 
-      if (splitAtMidnight && sameType && sameNo && sameFoaie && sameDesc) {
+      if (splitAtMidnight &&
+          sameType &&
+          sameNo &&
+          sameFoaie &&
+          sameDesc &&
+          sameAdvanced) {
         cur['end'] = next['end'];
       } else {
         out.add(cur);
