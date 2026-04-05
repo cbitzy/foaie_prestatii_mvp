@@ -70,24 +70,24 @@ If the user's request is narrow, keep your work narrow. Do not broaden the task 
 
 ## Required Workflow
 
-### 9. First locate the exact target
+### 10. First locate the exact target
 Identify the exact file path, symbol, widget, function, class, or block that must be changed before proposing edits.
 
-### 10. Read enough context before changing anything
+### 11. Read enough context before changing anything
 Read the target code and the immediately related code so the change is grounded in actual project context.
 
-### 11. Explain the intended change before applying it
+### 12. Explain the intended change before applying it
 Before editing, state briefly what will change, where it will change, and whether other files are affected.
 
-### 12. Wait for explicit user approval before applying any patch
+### 13. Wait for explicit user approval before applying any patch
 After analysis and after proposing the patch, stop and wait for explicit user approval before applying any modification.
 
 Do not treat silence, implied agreement, or general discussion as permission to edit files.
 
-### 13. Stop when requirements are ambiguous
+### 14. Stop when requirements are ambiguous
 If multiple valid implementations exist and the user did not choose one, do not silently pick one and present it as certain.
 
-### 14. After editing, report exactly what changed
+### 15. After editing, report exactly what changed
 State the file paths changed, the exact purpose of each change, and any areas that should be verified manually.
 
 ---
@@ -238,7 +238,8 @@ At the start of each task, first do this:
 3. Restate the exact requested change
 4. Identify the files affected
 5. State any uncertainty
-6. Only then propose or apply the change
+6. Only then propose the patch
+7. Apply changes only after explicit user approval
 
 ---
 
